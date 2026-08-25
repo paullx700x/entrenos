@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0a0b0f" />
+  <title>EntreNós — transferência direta</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="EntreNós">
+        <span class="brand-mark">↔</span>
+        <span>EntreNós</span>
+      </a>
+      <span id="privacyBadge" class="badge"><span class="dot"></span> sem servidor de arquivos</span>
+    </header>
+
+    <section class="hero">
+      <div>
+        <p class="eyebrow">P2P · WebRTC · SHA-256</p>
+        <h1>Seu arquivo vai <em>direto</em> para o outro dispositivo.</h1>
+        <p class="lede">Sem upload intermediário, sem conta e sem limite artificial. O navegador cria um canal criptografado entre os dois aparelhos.</p>
+      </div>
+      <div class="stats" aria-label="Características">
+        <div><strong>0 B</strong><span>armazenados por nós</span></div>
+        <div><strong>DTLS</strong><span>canal protegido</span></div>
+        <div><strong>SHA-256</strong><span>integridade verificada</span></div>
+      </div>
+    </section>
+
+    <section class="panel" id="startPanel">
+      <h2>O que você quer fazer?</h2>
+      <div class="choice-grid">
+        <button id="sendChoice" class="choice primary">
+          <span class="choice-icon">↑</span>
+          <span><strong>Enviar arquivo</strong><small>Escolha um arquivo e gere o convite.</small></span>
+        </button>
+        <button id="receiveChoice" class="choice">
+          <span class="choice-icon">↓</span>
+          <span><strong>Receber arquivo</strong><small>Leia o convite do outro dispositivo.</small></span>
+        </button>
+      </div>
+    </section>
+
+    <section class="panel hidden" id="sendPanel">
+      <div class="panel-head">
+        <div><p class="step">ENVIO</p><h2>1. Escolha o arquivo</h2></div>
+        <button class="ghost" data-reset>Recomeçar</button>
+      </div>
+      <label class="dropzone" id="dropzone">
+        <input id="fileInput" type="file" />
+        <span class="drop-icon">＋</span>
+        <strong id="dropTitle">Toque para escolher um arquivo</strong>
+        <small id="dropHint">ou arraste e solte aqui</small>
+      </label>
+
+      <div id="offerArea" class="hidden stage">
+        <div class="stage-head"><div><p class="step">PASSO 2</p><h3>Mostre este convite ao receptor</h3></div><span id="offerSize" class="tiny-badge"></span></div>
+        <div class="signal-grid">
+          <div class="qr-card"><div id="offerQr" class="qr"></div><small>Escaneie o QR</small></div>
+          <div class="code-card">
+            <label for="offerCode">Código do convite</label>
+            <textarea id="offerCode" readonly></textarea>
+            <button class="secondary" data-copy="offerCode">Copiar código</button>
+          </div>
+        </div>
+        <div class="stage-divider"></div>
+        <p class="step">PASSO 3</p>
+        <h3>Cole a resposta do receptor</h3>
+        <textarea id="answerInput" placeholder="Cole aqui o código de resposta..."></textarea>
+        <div class="row-actions">
+          <button id="applyAnswer" class="primary-btn">Conectar</button>
+          <button id="scanAnswer" class="secondary">Ler QR</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel hidden" id="receivePanel">
+      <div class="panel-head">
+        <div><p class="step">RECEBIMENTO</p><h2>1. Leia o convite</h2></div>
+        <button class="ghost" data-reset>Recomeçar</button>
+      </div>
+      <textarea id="offerInput" placeholder="Cole aqui o código do remetente..."></textarea>
+      <div class="row-actions">
+        <button id="acceptOffer" class="primary-btn">Gerar resposta</button>
+        <button id="scanOffer" class="secondary">Ler QR</button>
+      </div>
+
+      <div id="answerArea" class="hidden stage">
+        <div class="stage-head"><div><p class="step">PASSO 2</p><h3>Devolva esta resposta ao remetente</h3></div><span id="answerSize" class="tiny-badge"></span></div>
+        <div class="signal-grid">
+          <div class="qr-card"><div id="answerQr" class="qr"></div><small>Mostre este QR</small></div>
+          <div class="code-card">
+            <label for="answerCode">Código de resposta</label>
+            <textarea id="answerCode" readonly></textarea>
+            <button class="secondary" data-copy="answerCode">Copiar código</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="transferPanel" class="panel hidden transfer-panel">
+      <div class="transfer-top">
+        <div class="status-orb" id="statusOrb">↔</div>
+        <div><p id="connectionState" class="step">CONECTANDO</p><h2 id="transferTitle">Preparando canal direto…</h2><p id="transferMeta" class="muted"></p></div>
+      </div>
+      <div class="progress-track"><div id="progressBar"></div></div>
+      <div class="transfer-stats">
+        <div><span>Progresso</span><strong id="progressText">0%</strong></div>
+        <div><span>Transferido</span><strong id="bytesText">0 B</strong></div>
+        <div><span>Velocidade</span><strong id="speedText">—</strong></div>
+      </div>
+      <div id="resultArea" class="result hidden"></div>
+    </section>
+
+    <section class="details">
+      <article><span>01</span><h3>Sem nuvem no meio</h3><p>O servidor não recebe o conteúdo do arquivo. O SDP é trocado manualmente entre os dois dispositivos.</p></article>
+      <article><span>02</span><h3>Backpressure real</h3><p>Os blocos respeitam o buffer do DataChannel para evitar estouro de memória em transferências maiores.</p></article>
+      <article><span>03</span><h3>Integridade verificável</h3><p>O receptor recalcula SHA-256 e compara com o hash enviado antes de liberar o download.</p></article>
+    </section>
+  </main>
+
+  <dialog id="scannerDialog">
+    <div class="scanner-head"><div><p class="step">LEITOR</p><h3>Aponte para o QR</h3></div><button id="closeScanner" class="ghost">Fechar</button></div>
+    <video id="scannerVideo" autoplay playsinline muted></video>
+    <p id="scannerHelp" class="muted">A câmera e o BarcodeDetector precisam estar disponíveis neste navegador.</p>
+  </dialog>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
